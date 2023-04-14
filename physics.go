@@ -37,14 +37,12 @@ func (world *World) Solve(dt float32) {
 		obj.ApplyForce(obj.vel.Mult(-world.airFriction))
 	}
 
-	backupPos := world.objs[0].pos
+	world.objs[0].force = Vec{} //static(no force, no movement)
 
 	//solves objects
 	for _, obj := range world.objs {
 		obj.Solve(dt)
 	}
-
-	world.objs[0].pos = backupPos
 }
 
 type Obj struct {
@@ -87,27 +85,4 @@ func (spring *Spring) Solve() {
 
 	spring.a.ApplyForce(force)
 	spring.b.ApplyForce(force.Neg())
-}
-
-func WorldTest() *World {
-	var world World
-	world.gravitation.y = 9.81 //- ...
-	world.airFriction = 0.02
-
-	const N = 100
-	const SPRING_LEN = 0.05
-
-	//adds objects
-	p := Vec{x: 3, y: 1}
-	for i := 0; i < N; i++ {
-		world.objs = append(world.objs, &Obj{mass: 0.05, pos: p})
-		p.x += SPRING_LEN
-	}
-
-	//adds springs
-	for i := 1; i < N; i++ {
-		world.springs = append(world.springs, &Spring{a: world.objs[i-1], b: world.objs[i], constant: 10000, length: SPRING_LEN, friction: 0.2})
-	}
-
-	return &world
 }
