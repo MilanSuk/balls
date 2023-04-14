@@ -17,11 +17,11 @@ limitations under the License.
 package main
 
 func WorldTest() *World {
-	var world World
+	world := NewWorld(-1)
 	world.gravitation.y = 9.81 //negative ...
 	world.airFriction = 0.02
 
-	const SPRING_LEN = 0.05
+	const SPRING_LEN = 0.03
 
 	/*//adds objects
 	const N = 200
@@ -37,7 +37,7 @@ func WorldTest() *World {
 	}*/
 
 	//adds objects
-	const N = 50
+	const N = 100
 	p := Vec{x: 3, y: 1}
 	for y := 0; y < N; y++ {
 		for x := 0; x < N; x++ {
@@ -45,6 +45,9 @@ func WorldTest() *World {
 			p.x += SPRING_LEN
 		}
 	}
+	//static objects
+	world.objs[0].static = true
+	world.objs[N-1].static = true
 
 	//adds springs
 	for y := 0; y < N; y++ {
@@ -62,5 +65,5 @@ func WorldTest() *World {
 		}
 	}
 
-	return &world
+	return world
 }
