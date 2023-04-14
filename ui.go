@@ -144,22 +144,21 @@ func (ui *Ui) Event() (bool, error) {
 func (ui *Ui) Draw() error {
 
 	st := time.Now().UnixMilli()
-	const SUB_STEPS = 50
-	for i := 0; i < SUB_STEPS; i++ {
-		ui.world.Solve(1.0 / 60 / SUB_STEPS)
-	}
 
-	fmt.Printf("FPS: %f\n", 1.0/float32(time.Now().UnixMilli()-st)*1000)
+	//solve
+	const SUB_STEPS = 20
+	for i := 0; i < SUB_STEPS; i++ {
+		ui.world.Solve(1.0/60/SUB_STEPS, -1)
+	}
+	tmSolve := time.Now().UnixMilli()
 
 	for _, obj := range ui.world.objs {
-
 		p := obj.pos.Mult(100)
-		gfx.AAEllipseRGBA(ui.render, int32(p.x), int32(p.y), 3, 3, 10, 10, 10, 255)
+		gfx.PixelRGBA(ui.render, int32(p.x), int32(p.y), 10, 10, 10, 255)
+		//gfx.FilledEllipseRGBA(ui.render, int32(p.x), int32(p.y), 2, 2, 10, 10, 10, 255)
 	}
 
-	//gfx.AALineRGBA(render, start.x, start.y, end.x, end.y, cd.r, cd.g, cd.b, cd.a)
-	//gfx.FilledEllipseRGBA(self.render, p.x, p.y, coord.size.x/2, coord.size.y/2, cd.r, cd.g, cd.b, cd.a)
-	//gfx.AAEllipseRGBA(self.render, p.x, p.y, coord.size.x/2, coord.size.y/2, cd.r, cd.g, cd.b, cd.a)
+	fmt.Printf("FPS all: %f, FPS solve: %f\n", 1.0/float32(time.Now().UnixMilli()-st)*1000, 1.0/float32(tmSolve-st)*1000)
 
 	return nil
 }
