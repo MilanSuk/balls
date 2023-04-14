@@ -21,7 +21,7 @@ func WorldTest() *World {
 	world.gravitation.y = 9.81 //negative ...
 	world.airFriction = 0.02
 
-	const SPRING_LEN = 0.03
+	const SPRING_LEN = 0.025
 
 	/*//adds objects
 	const N = 200
@@ -37,11 +37,11 @@ func WorldTest() *World {
 	}*/
 
 	//adds objects
-	const N = 100
+	const N = 200
 	p := Vec{x: 3, y: 1}
 	for y := 0; y < N; y++ {
 		for x := 0; x < N; x++ {
-			world.objs = append(world.objs, &Obj{mass: 0.05, pos: Vec{x: 3 + float32(x)*SPRING_LEN, y: 1 + float32(y)*SPRING_LEN}})
+			world.objs = append(world.objs, &Obj{mass: 0.03, pos: Vec{x: 3 + float32(x)*SPRING_LEN, y: 0.1 + float32(y)*SPRING_LEN}})
 			p.x += SPRING_LEN
 		}
 	}
@@ -54,7 +54,7 @@ func WorldTest() *World {
 		for x := 1; x < N; x++ {
 			iA := y*N + (x - 1)
 			iB := y*N + (x + 0)
-			world.springs = append(world.springs, &Spring{a: world.objs[iA], b: world.objs[iB], constant: 10000, length: SPRING_LEN, friction: 0.2})
+			world.springs = append(world.springs, &Spring{a: world.objs[iA], b: world.objs[iB], constant: 10000, length: SPRING_LEN, friction: 0.3})
 		}
 	}
 	for y := 1; y < N; y++ {
