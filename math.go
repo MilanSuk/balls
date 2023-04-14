@@ -26,6 +26,12 @@ func (a Vec) Add(b Vec) Vec {
 	return Vec{a.x + b.x, a.y + b.y, a.z + b.z}
 }
 
+func (a *Vec) EqAdd(b Vec) {
+	a.x += b.x
+	a.y += b.y
+	a.z += b.z
+}
+
 func (a Vec) Sub(b Vec) Vec {
 	return Vec{a.x - b.x, a.y - b.y, a.z - b.z}
 }
