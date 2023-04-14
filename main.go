@@ -16,6 +16,10 @@ limitations under the License.
 
 package main
 
+//TODO ...
+//multi-threading
+//grid + collisions
+
 func main() {
 
 	err := InitSDLGlobal()
