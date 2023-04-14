@@ -32,7 +32,7 @@ func main() {
 	if err != nil {
 		return
 	}
-	defer ui.Destroy()
 	for ui.Tick() {
 	}
+	ui.Destroy()
 }
