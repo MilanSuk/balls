@@ -143,15 +143,17 @@ func (ui *Ui) Event() (bool, error) {
 
 func (ui *Ui) Draw() error {
 
-	const SUB_STEPS = 10
+	st := time.Now().UnixMilli()
+	const SUB_STEPS = 50
 	for i := 0; i < SUB_STEPS; i++ {
 		ui.world.Solve(1.0 / 60 / SUB_STEPS)
 	}
 
+	fmt.Printf("FPS: %f\n", 1.0/float32(time.Now().UnixMilli()-st)*1000)
+
 	for _, obj := range ui.world.objs {
 
 		p := obj.pos.Mult(100)
-
 		gfx.AAEllipseRGBA(ui.render, int32(p.x), int32(p.y), 3, 3, 10, 10, 10, 255)
 	}
 
