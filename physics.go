@@ -16,6 +16,13 @@ limitations under the License.
 
 package main
 
+import (
+	"runtime"
+	"sync"
+)
+
+const NUM_MAX_THREADS = 8
+
 type World struct {
 	objs    []*Obj
 	springs []*Spring
@@ -24,42 +31,96 @@ type World struct {
 	airFriction float32
 }
 
-func (world *World) Solve(dt float32) {
+func NewWorld(num_threads int) *World {
+	var world World
+	return &world
+}
+
+func (world *World) Solve(dt float32, num_threads int) {
+
+	if num_threads < 0 {
+		num_threads = runtime.NumCPU()
+	}
+	if num_threads > NUM_MAX_THREADS {
+		num_threads = NUM_MAX_THREADS
+	}
+
+	var wg sync.WaitGroup
+
+	jmpStrings := (len(world.springs) / num_threads) + 1
+	jmpObjs := (len(world.objs) / num_threads) + 1
 
 	//solves springs
-	for _, spring := range world.springs {
-		spring.Solve()
-	}
+	for i := 0; i < num_threads; i++ {
+		wg.Add(1)
 
-	//applies enviroment forces
-	for _, obj := range world.objs {
-		obj.ApplyForce(world.gravitation.Mult(obj.mass))
-		obj.ApplyForce(obj.vel.Mult(-world.airFriction))
-	}
+		thread_i := i
+		st := i * jmpStrings
+		en := (i + 1) * jmpStrings
+		if en > len(world.springs) {
+			en = len(world.springs)
+		}
 
-	world.objs[0].force = Vec{} //static(no force, no movement)
-
-	//solves objects
-	for _, obj := range world.objs {
-		obj.Solve(dt)
+		go func() {
+			for i := st; i < en; i++ {
+				world.springs[i].Solve(thread_i)
+			}
+			defer wg.Done()
+		}()
 	}
+	wg.Wait()
+
+	//solve objects
+	for i := 0; i < num_threads; i++ {
+		wg.Add(1)
+
+		thread_i := i
+		st := i * jmpObjs
+		en := (i + 1) * jmpObjs
+		if en > len(world.objs) {
+			en = len(world.objs)
+		}
+
+		go func() {
+			for i := st; i < en; i++ {
+				obj := world.objs[i]
+				//applies enviroment forces
+				obj.ApplyForce(world.gravitation.Mult(obj.mass), thread_i)
+				obj.ApplyForce(obj.vel.Mult(-world.airFriction), thread_i)
+
+				if !obj.static {
+					obj.Solve(dt)
+				}
+			}
+			defer wg.Done()
+		}()
+	}
+	wg.Wait()
 }
 
 type Obj struct {
 	mass  float32
 	pos   Vec
 	vel   Vec
-	force Vec
+	force [NUM_MAX_THREADS]Vec
+
+	static bool
 }
 
-func (obj *Obj) ApplyForce(f Vec) {
-	obj.force = obj.force.Add(f)
+func (obj *Obj) ApplyForce(f Vec, thread_i int) {
+	obj.force[thread_i].EqAdd(f)
 }
 func (obj *Obj) Solve(dt float32) {
-	obj.vel = obj.vel.Add(obj.force.Mult(1 / obj.mass).Mult(dt))
-	obj.pos = obj.pos.Add(obj.vel.Mult(dt))
 
-	obj.force = Vec{}
+	//sum & reset
+	var force Vec
+	for i := 0; i < NUM_MAX_THREADS; i++ {
+		force.EqAdd(obj.force[i])
+		obj.force[i] = Vec{}
+	}
+
+	obj.vel.EqAdd(force.Mult(1 / obj.mass).Mult(dt))
+	obj.pos.EqAdd(obj.vel.Mult(dt))
 }
 
 type Spring struct {
@@ -71,7 +132,7 @@ type Spring struct {
 	friction float32
 }
 
-func (spring *Spring) Solve() {
+func (spring *Spring) Solve(thread_i int) {
 
 	springVector := spring.a.pos.Sub(spring.b.pos)
 
@@ -79,10 +140,10 @@ func (spring *Spring) Solve() {
 
 	var force Vec
 	if r != 0 {
-		force = force.Add(springVector.Mult(-1 / r).Mult((r - spring.length) * spring.constant)) //-1 = neg
+		force.EqAdd(springVector.Mult(-1 / r).Mult((r - spring.length) * spring.constant)) //-1 = neg
 	}
-	force = force.Add(spring.a.vel.Sub(spring.b.vel).Mult(spring.friction * -1)) //-1 = neg
+	force.EqAdd(spring.a.vel.Sub(spring.b.vel).Mult(spring.friction * -1)) //-1 = neg
 
-	spring.a.ApplyForce(force)
-	spring.b.ApplyForce(force.Neg())
+	spring.a.ApplyForce(force, thread_i)
+	spring.b.ApplyForce(force.Neg(), thread_i)
 }
