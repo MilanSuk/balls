@@ -36,6 +36,44 @@ func NewWorld(num_threads int) *World {
 	return &world
 }
 
+func (world *World) solveSprings(thread_i int, num_threads int, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+
+	jmpStrings := (len(world.springs) / num_threads) + 1
+	st := thread_i * jmpStrings
+	en := (thread_i + 1) * jmpStrings
+	if en > len(world.springs) {
+		en = len(world.springs)
+	}
+	for i := st; i < en; i++ {
+		world.springs[i].Solve(thread_i)
+	}
+}
+
+func (world *World) solveObjects(dt float32, thread_i int, num_threads int, wg *sync.WaitGroup) {
+
+	defer wg.Done()
+
+	jmpObjs := (len(world.objs) / num_threads) + 1
+	st := thread_i * jmpObjs
+	en := (thread_i + 1) * jmpObjs
+	if en > len(world.objs) {
+		en = len(world.objs)
+	}
+
+	for i := st; i < en; i++ {
+		obj := world.objs[i]
+		//applies enviroment forces
+		obj.ApplyForce(world.gravitation.Mult(obj.mass), thread_i)
+		obj.ApplyForce(obj.vel.Mult(-world.airFriction), thread_i)
+
+		if !obj.static {
+			obj.Solve(dt)
+		}
+	}
+}
+
 func (world *World) Solve(dt float32, num_threads int) {
 
 	if num_threads < 0 {
@@ -47,53 +85,17 @@ func (world *World) Solve(dt float32, num_threads int) {
 
 	var wg sync.WaitGroup
 
-	jmpStrings := (len(world.springs) / num_threads) + 1
-	jmpObjs := (len(world.objs) / num_threads) + 1
-
 	//solves springs
 	for i := 0; i < num_threads; i++ {
 		wg.Add(1)
-
-		thread_i := i
-		st := i * jmpStrings
-		en := (i + 1) * jmpStrings
-		if en > len(world.springs) {
-			en = len(world.springs)
-		}
-
-		go func() {
-			for i := st; i < en; i++ {
-				world.springs[i].Solve(thread_i)
-			}
-			defer wg.Done()
-		}()
+		go world.solveSprings(i, num_threads, &wg)
 	}
 	wg.Wait()
 
 	//solve objects
 	for i := 0; i < num_threads; i++ {
 		wg.Add(1)
-
-		thread_i := i
-		st := i * jmpObjs
-		en := (i + 1) * jmpObjs
-		if en > len(world.objs) {
-			en = len(world.objs)
-		}
-
-		go func() {
-			for i := st; i < en; i++ {
-				obj := world.objs[i]
-				//applies enviroment forces
-				obj.ApplyForce(world.gravitation.Mult(obj.mass), thread_i)
-				obj.ApplyForce(obj.vel.Mult(-world.airFriction), thread_i)
-
-				if !obj.static {
-					obj.Solve(dt)
-				}
-			}
-			defer wg.Done()
-		}()
+		go world.solveObjects(dt, i, num_threads, &wg)
 	}
 	wg.Wait()
 }
